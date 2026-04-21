@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSONL Editor</title>
+    <style>
+        body {
+            font-family: monospace;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #fff;
+        }
+
+        .controls {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #252526;
+            border: 1px solid #333;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        input[type="file"] {
+            color: #d4d4d4;
+        }
+
+        #editor-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .entry {
+            background: #2d2d2d;
+            padding: 15px;
+            border: 1px solid #3e3e42;
+            display: grid;
+            grid-template-columns: 1fr 1fr auto;
+            gap: 15px;
+            align-items: stretch;
+            transition: all 0.5s ease;
+        }
+
+        .entry:hover {
+            border-color: #0e639c;
+        }
+
+        label {
+            display: block;
+            font-size: 0.8em;
+            color: #dfdfdf;
+            margin-bottom: 10px;
+        }
+
+        textarea {
+            width: 100%;
+            height: 150px;
+            min-height: 150px;
+            max-height: 150px;
+            background: #000000;
+            color: #96a9c2;
+            padding: 5px;
+            font-family: monospace;
+            resize: none;
+            overflow-y: auto;
+            box-sizing: border-box;
+            transition: all 0.5s ease;
+        }
+
+        textarea:focus {
+            color: #fff;
+        }
+
+        .stats {
+            margin-top: 10px;
+            color: #858585;
+        }
+
+        .error {
+            color: #f48771;
+            font-weight: bold;
+            display: none;
+        }
+
+        .info-box {
+            background: #333;
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+
+        #notification {
+            /* hidden */
+            background-color: rgb(100, 100, 100);
+            align-items: flex-start;
+            border: 1px solid rgb(80, 80, 80);
+            color: white;
+            display: flex;
+            font-family: "Comic Sans MS", "Comic Sans", cursive;
+            gap: 12px;
+            left: 50%;
+            max-width: 90%;
+            opacity: 0;
+            padding: 14px 18px;
+            pointer-events: none;
+            position: fixed;
+            top: 20px;
+            transform: translateX(-50%)translateY(-150%);
+            transition: transform 0.4s cubic-bezier(.36, .47, .39, 1.12), opacity 0.5s cubic-bezier(.36, .47, .39, 1.12), border 0.7s cubic-bezier(.36, .47, .39, 1.12);
+            z-index: 1000;
+            animation: notifyPulse 3s infinite;
+        }
+
+        #notification.show {
+            border: 4px solid rgba(138, 138, 138, 0.8);
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateX(-50%)translateY(0);
+        }
+
+        .notif-close {
+            background-image: #42434c;
+            margin: auto;
+            border-radius: 1000px;
+            width: 24px;
+            height: 24px;
+        }
+
+        #notification .notif-body {
+            display: flex;
+            flex: 1 1 auto;
+            flex-direction: column;
+            font-size: 0.9em;
+            gap: 4px;
+            min-width: 0;
+        }
+
+        .notif-header {
+            font-size: 1.3em;
+            font-weight: 900;
+        }
+
+        #button {
+            background-image: linear-gradient(90deg, #4d2acb 11%, #071f45 100%);
+            position: relative;
+            overflow: hidden;
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            padding: 8px 15px;
+            cursor: pointer;
+            transition: all 0.7s;
+        }
+
+        @keyframes notifyPulse {
+
+            0%,
+            100% {
+                box-shadow: 0 0 0 rgba(0, 0, 0, 0.35);
+            }
+
+            50% {
+                box-shadow: 0 10px 20px rgb(130, 130, 130);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="notification"></div>
+    <h1>JSONL Dataset Editor</h1>
+    <div class="controls">
+        <input type="file" id="fileInput" accept=".json,.jsonl,.txt">
+        <button id="button" onclick="downloadData()">Download .jsonl</button>
+        <button id="button" class="danger" onclick="addNewEntry()">Add New Example</button>
+        <div id="errorMsg" class="error"></div>
+        <div class="stats" id="stats">No file loaded.</div>
+        <div><strong>\t</strong> is used to denote a tab.</div>
+    </div>
+
+    <div id="editor-container"></div>
+
+    <script>
+        let data = [];
+        let fixLog = [];
+        const STORAGE_KEY = "misinfo_dataset_editor_v1";
+        window.addEventListener("DOMContentLoaded", () => {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) {
+                try {
+                    data = JSON.parse(saved);
+                    render();
+                    updateStats(data.length, data.length, 0, []);
+                    console.log("Loaded from LocalStorage");
+                } catch (e) {
+                    console.error("Failed to load from LocalStorage", e);
+                }
+            }
+        });
+
+        function saveToLocalStorage() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+            } catch (e) {
+                console.error("Failed to save to LocalStorage", e);
+                document.getElementById("errorMsg").innerText = "Warning: LocalStorage full or disabled.";
+                document.getElementById("errorMsg").style.display = "block";
+            }
+        }
+
+        document.getElementById("fileInput").addEventListener("change", function (e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                const content = e.target.result;
+                const lines = content.split(/\r?\n/).filter(line => line.trim() !== "");
+
+                data = [];
+                fixLog = [];
+                let errors = 0;
+                lines.forEach((line, index) => {
+                    try {
+                        let originalLine = line;
+                        let fixedLine = line.replace(/"prompt "\s*:/g, "'prompt':")
+                            .replace(/"completion "\s*:/g, "'completion':");
+                        const obj = JSON.parse(fixedLine);
+                        if (obj.prompt && obj.completion) {
+                            data.push(obj);
+                        } else {
+                            errors++;
+                        }
+                    } catch (err) {
+                        errors++;
+                    }
+                });
+
+                render();
+                updateStats(data.length, lines.length, errors, fixLog);
+                saveToLocalStorage();
+            };
+            reader.readAsText(file);
+        });
+
+        function render() {
+            const container = document.getElementById("editor-container");
+            container.innerHTML = "";
+
+            data.forEach((item, index) => {
+                const div = document.createElement("div");
+                div.className = "entry";
+                div.innerHTML = `
+                    <div>
+                        <label>The prompt/input. This is what the user will say.</label>
+                        <textarea oninput="updateData(${index}, "prompt", this.value)">${escapeHtml(item.prompt)}</textarea>
+                    </div>
+                    <div>
+                        <label>The AI output. This is what the AI will say in response to the user.</label>
+                        <textarea oninput="updateData(${index}, "completion", this.value)">${escapeHtml(item.completion)}</textarea>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function updateData(index, key, value) {
+            data[index][key] = value;
+            saveToLocalStorage();
+        }
+
+        function addNewEntry() {
+            data.unshift({ "prompt": "New Prompt", "completion": "New Answer" });
+            render();
+            saveToLocalStorage();
+            setTimeout(() => window.scrollTo(0, 0), 100);
+        }
+
+        function downloadData() {
+            if (data.length === 0) {
+                alert("No data to download! Please load the file.");
+                return;
+            }
+            const jsonlContent = data.map(item => JSON.stringify(item)).join("\n");
+            const blob = new Blob([jsonlContent], { type: "text/plain" });
+            const url = URL.createObjectURL(blob);
+
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "editedDataset.jsonl";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function escapeHtml(text) {
+            if (!text) return "";
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/"/g, "&#039;");
+        }
+
+        function processFile() {
+            document.getElementById("fileInput").click();
+        }
+
+        function updateStats(total, original, errors, logs) {
+            const statsDiv = document.getElementById("stats");
+            statsDiv.innerText = `Total Entries: ${total}`;
+
+            if (localStorage.getItem(STORAGE_KEY)) {
+                statsDiv.innerText += " (Auto-saved locally)";
+            }
+        }
+
+        (function () {
+            let container = document.getElementById("notification");
+            let hideTimer = null;
+            let isNotificationShowing = false;
+            let notificationQueue = [];
+
+            function escapeHtml(str) {
+                if (typeof str !== "string") return "";
+                return str.replace(/[&<>""]/g, (s) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&quot;", '"': "&#39;" })[s]);
+            }
+            function hideNotification() {
+                if (!container || !container.classList.contains("show")) return;
+                container.classList.remove("show");
+                //after transition remove content so it can be garbage collected and to restore pointer-events when hidden
+                const onEnd = () => {
+                    container.innerHTML = "";
+                    container.removeEventListener("transitionend", onEnd);
+                    isNotificationShowing = false;
+                    //process queue if there are pending notifications
+                    if (notificationQueue.length > 0) {
+                        const nextNotification = notificationQueue.shift();
+                        window.notify(...nextNotification);
+                    }
+                };
+                container.addEventListener("transitionend", onEnd);
+                if (hideTimer) {
+                    clearTimeout(hideTimer);
+                    hideTimer = null;
+                }
+            }
+            window.notify = function notify(text = "", header = "", icon = "info.svg", time = 6000) {
+                //in case i fuck something up
+                if (typeof developer !== "undefined" && developer === true) {
+                    console.log("notify() called - window.notifications:", typeof window.notifications !== "undefined" ? window.notifications : "undefined");
+                }
+
+                if (window.notifications === false) {
+                    if (typeof developer !== "undefined" && developer === true) {
+                        console.log("notify() blocked: window.notifications is false");
+                    }
+                    return;
+                }
+                try {
+                    //if no container exists, make one
+                    if (!container) {
+                        container = document.createElement("div");
+                        container.id = "notification";
+                        document.body.appendChild(container);
+                    }
+                    //queue the notification if one is already showing
+                    if (isNotificationShowing) {
+                        notificationQueue.push([text, header, icon, time]);
+                        return;
+                    }
+
+                    const notificationsEnabled = (typeof settings !== "undefined") ? settings.notifications !== false : true;
+                    if (!notificationsEnabled) {
+                        if (typeof developer !== "undefined" && developer === true) {
+                            console.log("notify() blocked: settings.notifications is false");
+                        }
+                        return;
+                    }
+                    isNotificationShowing = true;
+                    time = Number(time);
+                    if (isNaN(time) || time <= 0) time = 6000;
+                    const iconPath = (typeof icon === "string" && icon.indexOf("/") === -1) ? `/asset/ui/${icon}` : icon;
+                    //accessibility attribs
+                    container.setAttribute("role", "status");
+                    container.setAttribute("aria-live", "polite");
+                    container.setAttribute("aria-atomic", "true");
+                    container.tabIndex = -1;
+                    container.innerHTML = `\n<div class="notif-body">\n<div class="notif-header">${escapeHtml(header)}</div>\n<div class="notif-text">${escapeHtml(text)}</div>\n</div>\n<button class="notif-close" aria-label="Close notification">&times;</button>\n`;
+                    const closeBtn = container.querySelector(".notif-close");
+                    if (closeBtn) closeBtn.addEventListener("click", hideNotification, { once: true });
+                    //show
+                    requestAnimationFrame(() => {
+                        container.classList.add("show");
+                        try { container.focus(); } catch (e) { }
+                    });
+                    //default auto-hide after provided time
+                    if (hideTimer) clearTimeout(hideTimer);
+                    hideTimer = setTimeout(hideNotification, time);
+                    return hideNotification;
+                } catch (e) {
+                    console.error("Notification error: ", e);
+                }
+            };
+        })();
+        document.addEventListener("DOMContentLoaded", notify("You can look around at the existing examples first, so you know the current, general style of the examples.", "HEY!", "", "7000"))
+    </script>
+</body>
+
+</html>
