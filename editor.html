@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JSONL Editor</title>
+    <title>DatasetEdit</title>
     <style>
         body {
             font-family: monospace;
@@ -175,7 +175,7 @@
 
 <body>
     <div id="notification"></div>
-    <h1>JSONL Dataset Editor</h1>
+    <h1>Dataset</h1>
     <div class="controls">
         <input type="file" id="fileInput" accept=".json,.jsonl,.txt">
         <button id="button" onclick="downloadData()">Download .jsonl</button>
@@ -190,17 +190,17 @@
     <script>
         let data = [];
         let fixLog = [];
-        const STORAGE_KEY = "misinfo_dataset_editor_v1";
-        window.addEventListener("DOMContentLoaded", () => {
+        const STORAGE_KEY = 'misinfo_dataset_editor_v1';
+        window.addEventListener('DOMContentLoaded', () => {
             const saved = localStorage.getItem(STORAGE_KEY);
             if (saved) {
                 try {
                     data = JSON.parse(saved);
                     render();
                     updateStats(data.length, data.length, 0, []);
-                    console.log("Loaded from LocalStorage");
+                    console.log('Loaded from LocalStorage');
                 } catch (e) {
-                    console.error("Failed to load from LocalStorage", e);
+                    console.error('Failed to load from LocalStorage', e);
                 }
             }
         });
@@ -209,20 +209,20 @@
             try {
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
             } catch (e) {
-                console.error("Failed to save to LocalStorage", e);
-                document.getElementById("errorMsg").innerText = "Warning: LocalStorage full or disabled.";
-                document.getElementById("errorMsg").style.display = "block";
+                console.error('Failed to save to LocalStorage', e);
+                document.getElementById('errorMsg').innerText = "Warning: LocalStorage full or disabled.";
+                document.getElementById('errorMsg').style.display = 'block';
             }
         }
 
-        document.getElementById("fileInput").addEventListener("change", function (e) {
+        document.getElementById('fileInput').addEventListener('change', function (e) {
             const file = e.target.files[0];
             if (!file) return;
 
             const reader = new FileReader();
             reader.onload = function (e) {
                 const content = e.target.result;
-                const lines = content.split(/\r?\n/).filter(line => line.trim() !== "");
+                const lines = content.split(/\r?\n/).filter(line => line.trim() !== '');
 
                 data = [];
                 fixLog = [];
@@ -230,8 +230,8 @@
                 lines.forEach((line, index) => {
                     try {
                         let originalLine = line;
-                        let fixedLine = line.replace(/"prompt "\s*:/g, "'prompt':")
-                            .replace(/"completion "\s*:/g, "'completion':");
+                        let fixedLine = line.replace(/"prompt "\s*:/g, '"prompt":')
+                            .replace(/"completion "\s*:/g, '"completion":');
                         const obj = JSON.parse(fixedLine);
                         if (obj.prompt && obj.completion) {
                             data.push(obj);
@@ -251,20 +251,20 @@
         });
 
         function render() {
-            const container = document.getElementById("editor-container");
-            container.innerHTML = "";
+            const container = document.getElementById('editor-container');
+            container.innerHTML = '';
 
             data.forEach((item, index) => {
-                const div = document.createElement("div");
-                div.className = "entry";
+                const div = document.createElement('div');
+                div.className = 'entry';
                 div.innerHTML = `
                     <div>
                         <label>The prompt/input. This is what the user will say.</label>
-                        <textarea oninput="updateData(${index}, "prompt", this.value)">${escapeHtml(item.prompt)}</textarea>
+                        <textarea oninput="updateData(${index}, 'prompt', this.value)">${escapeHtml(item.prompt)}</textarea>
                     </div>
                     <div>
                         <label>The AI output. This is what the AI will say in response to the user.</label>
-                        <textarea oninput="updateData(${index}, "completion", this.value)">${escapeHtml(item.completion)}</textarea>
+                        <textarea oninput="updateData(${index}, 'completion', this.value)">${escapeHtml(item.completion)}</textarea>
                     </div>
                 `;
                 container.appendChild(div);
@@ -288,13 +288,13 @@
                 alert("No data to download! Please load the file.");
                 return;
             }
-            const jsonlContent = data.map(item => JSON.stringify(item)).join("\n");
-            const blob = new Blob([jsonlContent], { type: "text/plain" });
+            const jsonlContent = data.map(item => JSON.stringify(item)).join('\n');
+            const blob = new Blob([jsonlContent], { type: 'text/plain' });
             const url = URL.createObjectURL(blob);
 
-            const a = document.createElement("a");
+            const a = document.createElement('a');
             a.href = url;
-            a.download = "editedDataset.jsonl";
+            a.download = 'editedDataset.jsonl';
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -302,21 +302,21 @@
         }
 
         function escapeHtml(text) {
-            if (!text) return "";
+            if (!text) return '';
             return text
                 .replace(/&/g, "&amp;")
                 .replace(/</g, "&lt;")
                 .replace(/>/g, "&gt;")
                 .replace(/"/g, "&quot;")
-                .replace(/"/g, "&#039;");
+                .replace(/'/g, "&#039;");
         }
 
         function processFile() {
-            document.getElementById("fileInput").click();
+            document.getElementById('fileInput').click();
         }
 
         function updateStats(total, original, errors, logs) {
-            const statsDiv = document.getElementById("stats");
+            const statsDiv = document.getElementById('stats');
             statsDiv.innerText = `Total Entries: ${total}`;
 
             if (localStorage.getItem(STORAGE_KEY)) {
@@ -331,8 +331,8 @@
             let notificationQueue = [];
 
             function escapeHtml(str) {
-                if (typeof str !== "string") return "";
-                return str.replace(/[&<>""]/g, (s) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&quot;", '"': "&#39;" })[s]);
+                if (typeof str !== "string") return '';
+                return str.replace(/[&<>"']/g, (s) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[s]);
             }
             function hideNotification() {
                 if (!container || !container.classList.contains("show")) return;
@@ -356,21 +356,21 @@
             }
             window.notify = function notify(text = "", header = "", icon = "info.svg", time = 6000) {
                 //in case i fuck something up
-                if (typeof developer !== "undefined" && developer === true) {
-                    console.log("notify() called - window.notifications:", typeof window.notifications !== "undefined" ? window.notifications : "undefined");
+                if (typeof developer !== 'undefined' && developer === true) {
+                    console.log('notify() called - window.notifications:', typeof window.notifications !== 'undefined' ? window.notifications : 'undefined');
                 }
 
                 if (window.notifications === false) {
-                    if (typeof developer !== "undefined" && developer === true) {
-                        console.log("notify() blocked: window.notifications is false");
+                    if (typeof developer !== 'undefined' && developer === true) {
+                        console.log('notify() blocked: window.notifications is false');
                     }
                     return;
                 }
                 try {
                     //if no container exists, make one
                     if (!container) {
-                        container = document.createElement("div");
-                        container.id = "notification";
+                        container = document.createElement('div');
+                        container.id = 'notification';
                         document.body.appendChild(container);
                     }
                     //queue the notification if one is already showing
@@ -381,37 +381,67 @@
 
                     const notificationsEnabled = (typeof settings !== "undefined") ? settings.notifications !== false : true;
                     if (!notificationsEnabled) {
-                        if (typeof developer !== "undefined" && developer === true) {
-                            console.log("notify() blocked: settings.notifications is false");
+                        if (typeof developer !== 'undefined' && developer === true) {
+                            console.log('notify() blocked: settings.notifications is false');
                         }
                         return;
                     }
                     isNotificationShowing = true;
                     time = Number(time);
                     if (isNaN(time) || time <= 0) time = 6000;
-                    const iconPath = (typeof icon === "string" && icon.indexOf("/") === -1) ? `/asset/ui/${icon}` : icon;
+                    const iconPath = (typeof icon === 'string' && icon.indexOf('/') === -1) ? `/asset/ui/${icon}` : icon;
                     //accessibility attribs
-                    container.setAttribute("role", "status");
-                    container.setAttribute("aria-live", "polite");
-                    container.setAttribute("aria-atomic", "true");
+                    container.setAttribute('role', 'status');
+                    container.setAttribute('aria-live', 'polite');
+                    container.setAttribute('aria-atomic', 'true');
                     container.tabIndex = -1;
                     container.innerHTML = `\n<div class="notif-body">\n<div class="notif-header">${escapeHtml(header)}</div>\n<div class="notif-text">${escapeHtml(text)}</div>\n</div>\n<button class="notif-close" aria-label="Close notification">&times;</button>\n`;
-                    const closeBtn = container.querySelector(".notif-close");
+                    const closeBtn = container.querySelector('.notif-close');
                     if (closeBtn) closeBtn.addEventListener("click", hideNotification, { once: true });
                     //show
                     requestAnimationFrame(() => {
-                        container.classList.add("show");
+                        container.classList.add('show');
                         try { container.focus(); } catch (e) { }
                     });
                     //default auto-hide after provided time
                     if (hideTimer) clearTimeout(hideTimer);
                     hideTimer = setTimeout(hideNotification, time);
+                    //for debugging purposes
+                    if (typeof developer !== 'undefined' && developer === true) {
+                        console.log('Notification shown: with body text "' + text + '", header text "' + header + '", icon name "' + icon + '", and a time of ' + time + " milliseconds.")
+                    }
                     return hideNotification;
                 } catch (e) {
                     console.error("Notification error: ", e);
                 }
             };
         })();
+        let highlightMode = true;
+
+        function toggleHighlight() {
+            highlightMode = !highlightMode;
+            const logBox = document.getElementById('logBox');
+
+            if (highlightMode) {
+                logBox.style.display = 'block';
+                logBox.innerHTML = '';
+
+                data.forEach((item, index) => {
+                    // Replace actual newlines with a highlighted \n representation
+                    const highlightedCompletion = item.completion
+                        .replace(/\n/g, '<span style="background:#ffeb3b; color:#000; font-weight:bold;">\\n</span>')
+                        .replace(/ /g, '<span style="color:#aaa;">·</span>'); // Optional: show spaces
+
+                    const entry = document.createElement('div');
+                    entry.style.borderBottom = '1px solid #444';
+                    entry.style.padding = '5px';
+                    entry.innerHTML = `<strong>Prompt ${index}:</strong> ${item.prompt}<br><strong>Completion ${index}:</strong> ${highlightedCompletion}<br><br>`;
+                    logBox.appendChild(entry);
+                });
+            } else {
+                logBox.style.display = 'none';
+            }
+        }
         document.addEventListener("DOMContentLoaded", notify("You can look around at the existing examples first, so you know the current, general style of the examples.", "HEY!", "", "7000"))
     </script>
 </body>
