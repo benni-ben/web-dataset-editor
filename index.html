@@ -120,6 +120,7 @@
 
         .entry-title {
             font-weight: bold;
+            font-size: 14px;
             color: #fff;
         }
 
@@ -165,19 +166,15 @@
 
         textarea {
             width: 100%;
-            min-height: 120px;
-            background: #000000;
-            color: #96a9c2;
+            min-height: 260px;
+            background: #0b0b0b;
+            color: #ffffff;
             padding: 8px;
-            font-family: monospace;
+            font-family: "Fira Sans";
             resize: vertical;
             overflow-y: auto;
             border: 1px solid #444;
-        }
-
-        textarea:focus, select:focus {
-            outline: 1px solid var(--accent);
-            color: #fff;
+            font-size: 15px;
         }
 
         label {
@@ -321,7 +318,7 @@
 
                         const obj = JSON.parse(fixedLine);
                         const normalized = normalizeOneEntry(obj);
-
+                        //for debug
                         if (normalized) {
                             entries.push(normalized);
                         } else {
@@ -384,15 +381,14 @@
             const logDiv = document.getElementById('logBox');
 
             statsDiv.innerText = `Loaded ${total} entries from ${original} lines.`;
-
             if (errors > 0 || logs.length > 0) {
                 logDiv.style.display = 'block';
-                let msg = `<strong>Processing Log:</strong>\n`;
+                let msg = `Processing Log:\n`;
                 if (logs.filter(l => l.includes('Fixed')).length > 0) {
-                    msg += `- Fixed spacing in some JSON keys.\n`;
+                    msg += `Fixed spacing in some JSON keys.\n`;
                 }
                 if (errors > 0) {
-                    msg += `- Skipped ${errors} invalid or unsupported lines.`;
+                    msg += `Skipped ${errors} invalid or unsupported lines. Did you upload a valid file?`;
                 }
                 logDiv.innerText = msg;
             } else {
