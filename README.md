@@ -3,11 +3,14 @@ A JSONL dataset editor.
 
 This web editor has all code and styles(except fonts) embedded. Therefore, it can be run very easily. This was made pretty hastily for my satire dataset.
 
+This tool is great for editing datasets quickly with no vscode, but it does not have markdown formatting, and is not really good for professional use.
+
 Features: 
   - Automatic newline (\n is not shown, but any newlines will be converted to \n)
   - Autosaving
   - Importing and exporting
-  - More
+  - Minimalistic interface
+
 
 This imports and exports in **prompt** and **completion** JSONL format. Prompt is the prompt(what the user says or asks), and completion is what the AI responds with.
 
